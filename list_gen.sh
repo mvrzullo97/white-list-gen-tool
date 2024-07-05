@@ -5,15 +5,16 @@
 # usage menu
 echo
 echo "---------------------- Usage ----------------------"
-echo -e "\n   bash $0\n\n    -n <number of white-list to generate> \n    -s <service_provider code> (ex. 151) \n    -t <toll_charger> (ex. 6) \n    -a <apduIdentifier> \n    -p <progressive_number> (to generate plate automatically) \n    -f <first_plate_chars> (ex. AB) \n    -l <last_plate_chars> (ex. CD) \n    -r <PRG_white_list> \n"
+echo -e "\n   bash $0\n\n    -n <number of white-list to generate> \n    -t <list_type> (WI or WL) \n    -s <service_provider code> (ex. 151) \n    -c <toll_charger> (ex. 6) \n    -a <apduIdentifier> \n    -p <progressive_number> (to generate plate automatically) \n    -f <first_plate_chars> (ex. AB) \n    -l <last_plate_chars> (ex. CD) \n    -r <PRG_white_list> \n"
 echo
 
-while getopts n:s:t:a:p:f:l:r: flag
+while getopts n:t:s:c:a:p:f:l:r: flag
 do
     	case "${flag}" in
 		n) n=${OPTARG};;
+        t) LIST_TYPE=${OPTARG};;
         s) S_PROVIDER=${OPTARG};;
-        t) T_CHARGER=${OPTARG};;
+        c) T_CHARGER=${OPTARG};;
         a) C_APDU=${OPTARG};;
         p) PRG=${OPTARG};;
         f) plate_f=${OPTARG};;
@@ -86,7 +87,13 @@ function extract_offset_pad
 # vars delcaration
 current_timestamp=$(date +"%Y%m%d")
 OUT_DIR="OUT_DIR_WL"
-tmp_filename_WL="tmp_WL.xml"
+tmp_filename_WL="tmp_filename_white_list.xml"
+
+if [ $LIST_TYPE == "WI" ] ; then
+    LIST_TYPE="WIWI"
+else
+    LIST_TYPE="WFWF"
+fi
 
 # create OUT_DIR if not exist
 if ! [ -d $OUT_DIR ] ; then
@@ -107,22 +114,22 @@ PRG=${list_PRG[0]} # to do, cambiare dopo inserendo indicizzazione
 
 # gen PAN
 PAN=$(generate_PAN $PRG)
-echo -e "PAN: $PAN generated \n "
+echo -e "...generate PAN: $PAN \n "
 
 # gen PLATE
 PLATE=$(generate_PLATE $PRG $plate_f $plate_l)
-echo -e "PLATE: $PLATE generated \n"
+echo -e "...generate PLATE: $PLATE \n"
 
 HEX_PLATE=$(convert_PLATE_to_HEX $PLATE)
-echo -e "HEX_PLATE: $HEX_PLATE generated \n"
+echo -e "...generate HEX_PLATE: $HEX_PLATE \n"
 
 # create tmp file for the WL
 touch "$path_OUT_dir/$tmp_filename_WL"
 chmod 0777 "$path_OUT_dir/$tmp_filename_WL"
 
-echo -e "...creating '$tmp_filename_WL' at path: $(realpath $tmp_filename_WL)"
-echo
-echo -e "...generating white list with: Service Provider $S_PROVIDER, Toll Charger $T_CHARGER and apduIdentifer $C_APDU"
+echo -e "...create '$tmp_filename_WL' at path: $(realpath $tmp_filename_WL): OK \n"
+
+echo -e "...generate white list with: Service Provider $S_PROVIDER, Toll Charger $T_CHARGER and apduIdentifer $C_APDU: OK \n"
 
 # insert params into WL file
 cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
@@ -184,28 +191,31 @@ cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
 </infoExchange>
 EOF
 
-echo -e "...white list generated succesfully"
-
 # modify white list filename
 
 # pattern filename: DA06A56.F<naz_SP>00<cod_SP(5 chars)>T<naz_TC>00<cod_TC (5 chars)>.SET.<list_TYPE>.<unix_timestamp>.000<PRG (10 chars)>.XML
 
 const_DA_A="DA06A56.F"
 naz_SP="IT" #per ora costante
+naz_TC="IT"
 const_T="T"
 const_SET="SET"
-const_list_TYPE="WIWI" # per ora costante
 unix_timestamp=$(date +%s)
 
 fn_S_PROVIDER=$(extract_offset_pad $S_PROVIDER 5)
 fn_T_CHARGER=$(extract_offset_pad $T_CHARGER 5)
 fn_PRG_WL=$(extract_offset_pad $fn_PRG_WL 10)
 
-echo $fn_PRG_WL
-
  
+filename_WL="$const_DA_A$naz_SP$fn_S_PROVIDER$const_T$naz_TC$fn_T_CHARGER.$const_SET.$LIST_TYPE.$unix_timestamp.$fn_PRG_WL.XML"
 
-filename_WL="$const_DA_A$naz_SP$fn_S_PROVIDER$const_T$naz_TC$T_CHARGER.$const_SET.$const_list_TYPE.$unix_timestamp."
+mv "$path_OUT_dir/$tmp_filename_WL" "$path_OUT_dir/$filename_WL"
+echo -e "...change filename from '$tmp_filename_WL' to '$filename_WL': OK \n"
+
+filename_WL_ZIP="$filename_WL.ZIP"
+zip -r -q "$path_OUT_dir/$filename_WL_ZIP" "$path_OUT_dir/$filename_WL"
+echo "...zipped file: $filename_WL_ZIP"
+echo
 
 
 
