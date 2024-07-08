@@ -3,12 +3,10 @@
 # usage menu
 echo
 echo "---------------------- Usage ----------------------"
-echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < opt. delete file.XML at the end > (y-n)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f <plate chars> (ex. ABCD) \n    -p < progressive plate number > (ex. 25) \n    -r < prg wl filename > \n"
+echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < delete file.XML at the end > (y-n)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f <plate chars> (ex. ABCD) \n     -d < discount ID > (ex. 22) \n    -p < progressive plate number > (ex. 25) \n    -r < prg wl filename > \n"
 echo
 
-# to do funzione per codice baudot a partire da nazionalità service
-
-while getopts n:t:o:s:c:a:p:f:l:r: flag
+while getopts n:t:o:s:c:a:p:f:d:r: flag
 do
     case "${flag}" in
 		n) n=${OPTARG};;
@@ -19,10 +17,57 @@ do
         a) C_APDU=${OPTARG};;
         p) PRG=${OPTARG};;
         f) PLATE=${OPTARG};;
+        d) DISCOUNT=${OPTARG};;
         r) fn_PRG_WL=${OPTARG};;
 		\?) echo -e "\n Argument error! \n"; exit 0 ;;
 	esac
 done
+
+# params check
+if [ $# != 16 ] && [ $# != 18 ] && [ $# != 20 ]; then
+    echo "Argument error: please digit right command."
+	echo
+	exit 0
+fi
+
+# vars delcaration
+current_timestamp=$(date +"%Y%m%d")
+OUT_DIR="OUT_DIR_WL"
+tmp_filename_WL="tmp_filename_white_list.xml"
+plate_f=${PLATE:0:2}
+plate_l=${PLATE:2:2}
+providers_code=('151' '2321' '3000' '7' '49')
+naz_providers=('IT' 'IT' 'IT' 'DE' 'FR')
+keys=( {A..Z} )
+values=('11000' '10011' '01110' '10010' '10000' '10110' '01011' '00101' '01100' '11010' '11110' '01001' '00111' # baudot encoding
+        '00110' '00011' '01101' '11101' '01010' '10100' '00001' '11100' '01111' '11001' '10111' '10101' '10001') 
+discounts=('22')
+BOOL_discount=false
+
+# check if provider exists
+if ! [[ ${providers_code[@]} =~ $S_PROVIDER ]] ; then
+        echo "Param error: service provider's code '$S_PROVIDER' doesn't exist."
+        echo
+        exit 0
+elif ! [[ ${discounts[@]} =~ $DISCOUNT ]] ; then
+        echo "Param error: discount '$DISCOUNT' doesn't exist."
+        echo
+        exit 0
+fi
+
+if ! [ $DISCOUNT == '' ] ; then
+    BOOL_discount=true
+fi
+
+# create OUT_DIR if not exist
+if ! [ -d $OUT_DIR ] ; then
+	mkdir $OUT_DIR
+	path_OUT_dir=$(realpath $OUT_DIR)
+    echo -e "...create '$OUT_DIR' at path: '$path_OUT_dir' \n"
+    chmod 0777 "$path_OUT_dir"
+else
+	path_OUT_dir=$(realpath $OUT_DIR)
+fi
 
 # functions
 function generate_PAN 
@@ -109,16 +154,17 @@ function get_naz_from_pvd
     echo ${hash_PVD_NAZ[$pvd]}
 }
 
-# vars delcaration
-current_timestamp=$(date +"%Y%m%d")
-OUT_DIR="OUT_DIR_WL"
-tmp_filename_WL="tmp_filename_white_list.xml"
-LIST_TYPE=$(extract_WL_type $LIST_TYPE)
-# split the PLATE into two parts
-plate_f=${PLATE:0:2}
-plate_l=${PLATE:2:2}
-providers_code=('151' '2321' '3000' '7' '49')
-naz_providers=('IT' 'IT' 'IT' 'DE' 'FR')
+function generate_BAUDOT
+{
+    NAZ=$1
+    first_ch=${NAZ:0:1}
+    second_ch=${NAZ:1:1}
+    first_baudot=${hash_baudot[$first_ch]}
+    second_baudot=${hash_baudot[$second_ch]}
+
+    baudot_code=$first_baudot$second_baudot
+    echo ${baudot_code}
+}
 
 declare -A hash_PVD_NAZ
 length=${#providers_code[@]}
@@ -127,76 +173,39 @@ for ((i=0; i<$length; i++)) ; do
 	hash_PVD_NAZ["${providers_code[i]}"]="${naz_providers[i]}"
 done
 
-NAZ_S_PROVIDER=$(get_naz_from_pvd $S_PROVIDER)
+declare -A hash_baudot
+length=${#keys[@]}
 
-for i in "${!hash_PVD_NAZ[@]}"
-do
-    echo "key: $i"
-    echo "value: ${hash_PVD_NAZ[$i]}"
+for ((i=0; i<$length; i++)) ; do
+	hash_baudot["${keys[i]}"]="${values[i]}"
 done
 
+NAZ_S_PROVIDER=$(get_naz_from_pvd $S_PROVIDER)
+BAUDOT_CODE=$(generate_BAUDOT $NAZ_S_PROVIDER)
+LIST_TYPE=$(extract_WL_type $LIST_TYPE)
 
 
-
-# params check
-if [ $# != 16 ] && [ $# != 18 ] ; then
-    echo "Argument error: please digit right command."
-	echo
-	exit 0
-fi
-
-# check if provider exists
-if ! [[ ${providers_code[@]} =~ $S_PROVIDER ]] ; then
-        echo "Param error: service provider's code '$S_PROVIDER' doesn't exist."
-        echo
-        exit 0
-fi
-
-exit 0
-
-# create OUT_DIR if not exist
-if ! [ -d $OUT_DIR ] ; then
-	mkdir $OUT_DIR
-	path_OUT_dir=$(realpath $OUT_DIR)
-    echo -e "...create '$OUT_DIR' at path: '$path_OUT_dir' \n"
-    chmod 0777 "$path_OUT_dir"
-else
-	path_OUT_dir=$(realpath $OUT_DIR)
-fi
-
-# gen seq plate number
 MIN=$(expr $PRG)
 MAX=$(expr $MIN + $n)
 list_PRG=( $(seq $MIN $MAX) )
 
 # start the loop
-
 for ((i=0; i<n; i++)) 
 do
     PRG=${list_PRG[i]}
-
     echo -e "...create white list n° $(expr $i + 1) \n"
 
-    # gen PAN
     PAN=$(generate_PAN $PRG)
-    echo -e "...generate PAN: $PAN"
-
-    # gen PLATE
     PLATE=$(generate_PLATE $PRG $plate_f $plate_l)
-    echo -e "...generate PLATE: $PLATE \n"
-
     HEX_PLATE=$(convert_PLATE_to_HEX $PLATE)
-    #echo -e "...generate HEX_PLATE: $HEX_PLATE \n"
+
+    echo -e "...generate PAN: $PAN"
+    echo -e "...generate PLATE: $PLATE \n"
 
     # create tmp file for the WL
     touch "$path_OUT_dir/$tmp_filename_WL"
     chmod 0777 "$path_OUT_dir/$tmp_filename_WL"
 
-    #echo -e "...create '$tmp_filename_WL' at path: $(realpath $tmp_filename_WL): OK \n"
-
-    #echo -e "...generate white list with: Service Provider $S_PROVIDER, Toll Charger $T_CHARGER and apduIdentifer $C_APDU: OK \n"
-
-    # insert params into WL file
 cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <infoExchange>
@@ -204,11 +213,11 @@ cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
 		<apci>
 			<aidIdentifier>3</aidIdentifier>
 			<apduOriginator>
-				<countryCode>0110000001</countryCode>
+				<countryCode>${BAUDOT_CODE}</countryCode>
 				<providerIdentifier>${S_PROVIDER}</providerIdentifier>
 			</apduOriginator>
 			<informationSenderId>
-				<countryCode>0110000001</countryCode>
+				<countryCode>${BAUDOT_CODE}</countryCode>
 				<providerIdentifier>${S_PROVIDER}</providerIdentifier>
 			</informationSenderId>
 			<informationRecipientId>
@@ -241,12 +250,21 @@ cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
 							<actionRequested>3</actionRequested>
 							<efcContextMark>
 								<contractProvider>
-									<countryCode>0110000001</countryCode>
+									<countryCode>${BAUDOT_CODE}</countryCode>
 									<providerIdentifier>${S_PROVIDER}</providerIdentifier>
 								</contractProvider>
 								<typeOfContract>001D</typeOfContract>
 								<contextVersion>9</contextVersion>
 							</efcContextMark>
+EOF
+if [ $BOOL_discount ] ; then
+cat << EOF >> "$path_OUT_dir/$tmp_filename_WL"
+<applicableDiscounts>
+<discountId>${DISCOUNT}</discountId>
+</applicableDiscounts>
+EOF
+fi
+cat << EOF >> "$path_OUT_dir/$tmp_filename_WL"             
 						</ExceptionListEntry>
 					</exceptionListEntries>
 				</ExceptionListAdu>
@@ -254,14 +272,11 @@ cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
 		</adus>
 	</infoExchangeContent>
 </infoExchange>
-
 EOF
 
-    # modify white list filename
     # pattern filename WL: DA06A56.F<naz_SP>00<cod_SP(5 chars)>T<naz_TC>00<cod_TC (5 chars)>.SET.<list_TYPE>.<unix_timestamp>.000<PRG (10 chars)>.XML
-
+    
     const_DA_A="DA06A56.F"
-    naz_SP="IT" # per ora costante
     naz_TC="IT" # per ora costante
     const_T="T"
     const_SET="SET"
@@ -271,26 +286,16 @@ EOF
     fn_T_CHARGER=$(extract_offset_pad $T_CHARGER 5)
 
     fn_PRG_WL=$(extract_offset_pad $fn_PRG_WL 10)
-    filename_WL="$const_DA_A$naz_SP$fn_S_PROVIDER$const_T$naz_TC$fn_T_CHARGER.$const_SET.$LIST_TYPE.$unix_timestamp.$fn_PRG_WL.XML"
+    filename_WL="$const_DA_A$NAZ_S_PROVIDER$fn_S_PROVIDER$const_T$naz_TC$fn_T_CHARGER.$const_SET.$LIST_TYPE.$unix_timestamp.$fn_PRG_WL.XML"
 
     mv "$path_OUT_dir/$tmp_filename_WL" "$path_OUT_dir/$filename_WL"
-    #echo -e "...change filename from '$tmp_filename_WL' to '$filename_WL': OK \n"
-
     filename_WL_ZIP="$filename_WL.ZIP"
     zip -q -j "$path_OUT_dir/$filename_WL_ZIP" "$path_OUT_dir/$filename_WL"
     
-    echo $filename_WL_ZIP
-
-    # rename zipped file into .ZIP
-
-    #echo "...zipped file white list: '$filename_WL_ZIP'"
-    #echo
-
-    # NOTA: SP e TC sono swappati in caso di file di ack!
     # pattern filename ACK: DA06A56.F<naz_TC>00<cod_TC (5 chars)>T<naz_SP>00<cod_SP(5 chars)>.SET.<ACK_list_TYPE>.000<PRG (10 chars)>.XML
 
     ACK_TIPE=$(extract_ACK_type $LIST_TYPE)
-    filename_ACK="$const_DA_A$naz_TC$fn_T_CHARGER$const_T$naz_SP$fn_S_PROVIDER.$const_SET.$ACK_TIPE.$fn_PRG_WL.XML"
+    filename_ACK="$const_DA_A$naz_TC$fn_T_CHARGER$const_T$NAZ_S_PROVIDER$fn_S_PROVIDER.$const_SET.$ACK_TIPE.$fn_PRG_WL.XML"
 
 cat << EOF > "$path_OUT_dir/$filename_ACK"
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -307,7 +312,7 @@ cat << EOF > "$path_OUT_dir/$filename_ACK"
 				<providerIdentifier>${T_CHARGER}</providerIdentifier>
 			</informationSenderId>
 			<informationRecipientId>
-				<countryCode>0110000001</countryCode>
+				<countryCode>${BAUDOT_CODE}</countryCode>
 				<providerIdentifier>${S_PROVIDER}</providerIdentifier>
 			</informationRecipientId>
 			<apduIdentifier>927</apduIdentifier>
@@ -328,9 +333,7 @@ EOF
 
     filename_ACK_ZIP="$filename_ACK.ZIP"
     zip -q -j "$path_OUT_dir/$filename_ACK_ZIP" "$path_OUT_dir/$filename_ACK"
-    #echo "...zipped file ACK: '$filename_ACK_ZIP'"
-    #echo
-
+   
     # increment apduIdentifier and fn_PRG_file
     let "C_APDU++"
     fn_PRG_WL="$(expr $fn_PRG_WL + 1)"
