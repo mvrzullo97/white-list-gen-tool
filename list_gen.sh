@@ -3,12 +3,14 @@
 # usage menu
 echo
 echo "---------------------- Usage ----------------------"
-echo -e "\n   bash $0\n\n    -n <number of white list to generate> \n    -t <list_TYPE> (WI or WL) \n    -o <opt. delete_file.XML at the end> (y-n)\n    -s <service_provider code> (ex. 151) \n    -c <toll_charger code> (ex. 6) \n    -a <apduIdentifier> \n    -p <progressive_PLATE_number> (ex. 25) \n    -f <FIRST_plate_chars> (ex. AB) \n    -l <LAST_plate_chars> (ex. CD) \n    -r <PRG_filename_white_list> \n"
+echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < opt. delete file.XML at the end > (y-n)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f <plate chars> (ex. ABCD) \n    -p < progressive plate number > (ex. 25) \n    -r < prg wl filename > \n"
 echo
+
+# to do funzione per codice baudot a partire da nazionalità service
 
 while getopts n:t:o:s:c:a:p:f:l:r: flag
 do
-    	case "${flag}" in
+    case "${flag}" in
 		n) n=${OPTARG};;
         t) LIST_TYPE=${OPTARG};;
         o) BOOL_delete_xml=${OPTARG};;
@@ -16,19 +18,11 @@ do
         c) T_CHARGER=${OPTARG};;
         a) C_APDU=${OPTARG};;
         p) PRG=${OPTARG};;
-        f) plate_f=${OPTARG};;
-        l) plate_l=${OPTARG};;
+        f) PLATE=${OPTARG};;
         r) fn_PRG_WL=${OPTARG};;
 		\?) echo -e "\n Argument error! \n"; exit 0 ;;
 	esac
 done
-
-# params check
-if [ $# != 18 ] && [ $# != 20 ] ; then
-    echo "Argument error: please digit right command."
-	echo
-	exit 0
-fi
 
 # functions
 function generate_PAN 
@@ -109,12 +103,56 @@ function extract_ACK_type
     echo ${ACK_TYPE}
 }
 
+function get_naz_from_pvd
+{
+    pvd=$1
+    echo ${hash_PVD_NAZ[$pvd]}
+}
 
 # vars delcaration
 current_timestamp=$(date +"%Y%m%d")
 OUT_DIR="OUT_DIR_WL"
 tmp_filename_WL="tmp_filename_white_list.xml"
 LIST_TYPE=$(extract_WL_type $LIST_TYPE)
+# split the PLATE into two parts
+plate_f=${PLATE:0:2}
+plate_l=${PLATE:2:2}
+providers_code=('151' '2321' '3000' '7' '49')
+naz_providers=('IT' 'IT' 'IT' 'DE' 'FR')
+
+declare -A hash_PVD_NAZ
+length=${#providers_code[@]}
+
+for ((i=0; i<$length; i++)) ; do
+	hash_PVD_NAZ["${providers_code[i]}"]="${naz_providers[i]}"
+done
+
+NAZ_S_PROVIDER=$(get_naz_from_pvd $S_PROVIDER)
+
+for i in "${!hash_PVD_NAZ[@]}"
+do
+    echo "key: $i"
+    echo "value: ${hash_PVD_NAZ[$i]}"
+done
+
+
+
+
+# params check
+if [ $# != 16 ] && [ $# != 18 ] ; then
+    echo "Argument error: please digit right command."
+	echo
+	exit 0
+fi
+
+# check if provider exists
+if ! [[ ${providers_code[@]} =~ $S_PROVIDER ]] ; then
+        echo "Param error: service provider's code '$S_PROVIDER' doesn't exist."
+        echo
+        exit 0
+fi
+
+exit 0
 
 # create OUT_DIR if not exist
 if ! [ -d $OUT_DIR ] ; then
@@ -127,8 +165,8 @@ else
 fi
 
 # gen seq plate number
-MIN=$(expr $PRG + 1)
-MAX=$(expr $MIN + $n - 1)
+MIN=$(expr $PRG)
+MAX=$(expr $MIN + $n)
 list_PRG=( $(seq $MIN $MAX) )
 
 # start the loop
@@ -159,63 +197,64 @@ do
     #echo -e "...generate white list with: Service Provider $S_PROVIDER, Toll Charger $T_CHARGER and apduIdentifer $C_APDU: OK \n"
 
     # insert params into WL file
-    cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
-    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-    <infoExchange>
-        <infoExchangeContent>
-            <apci>
-                <aidIdentifier>3</aidIdentifier>
-                <apduOriginator>
-                    <countryCode>0110000001</countryCode>
-                    <providerIdentifier>${S_PROVIDER}</providerIdentifier>
-                </apduOriginator>
-                <informationSenderId>
-                    <countryCode>0110000001</countryCode>
-                    <providerIdentifier>${S_PROVIDER}</providerIdentifier>
-                </informationSenderId>
-                <informationRecipientId>
-                    <countryCode>0110000001</countryCode>
-                    <providerIdentifier>${T_CHARGER}</providerIdentifier>
-                </informationRecipientId>
-                <apduIdentifier>${C_APDU}</apduIdentifier>
-                <apduDate>20230316175200Z</apduDate>
-            </apci>
-            <adus>
-                <exceptionListAdus>
-                    <ExceptionListAdu>
-                        <aduIdentifier>12</aduIdentifier>
-                        <exceptionListVersion>1</exceptionListVersion>
-                        <exceptionListType>12</exceptionListType>
-                        <exceptionValidityStart>20230203085452Z</exceptionValidityStart>
-                        <exceptionListEntries>
-                            <ExceptionListEntry>
-                                <userId>
-                                    <pan>${PAN}</pan>
-                                    <licencePlateNumber>
-                                        <countryCode>0110000001</countryCode>
-                                        <alphabetIndicator>000000</alphabetIndicator>
-                                        <licencePlateNumber>${HEX_PLATE}</licencePlateNumber>
-                                    </licencePlateNumber>
-                                </userId>
-                                <statusType>0</statusType>
-                                <reasonCode>0</reasonCode>
-                                <entryValidityStart>20230104140028Z</entryValidityStart>
-                                <actionRequested>3</actionRequested>
-                                <efcContextMark>
-                                    <contractProvider>
-                                        <countryCode>0110000001</countryCode>
-                                        <providerIdentifier>${T_CHARGER}</providerIdentifier>
-                                    </contractProvider>
-                                    <typeOfContract>001D</typeOfContract>
-                                    <contextVersion>9</contextVersion>
-                                </efcContextMark>
-                            </ExceptionListEntry>
-                        </exceptionListEntries>
-                    </ExceptionListAdu>
-                </exceptionListAdus>
-            </adus>
-        </infoExchangeContent>
-    </infoExchange>
+cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<infoExchange>
+	<infoExchangeContent>
+		<apci>
+			<aidIdentifier>3</aidIdentifier>
+			<apduOriginator>
+				<countryCode>0110000001</countryCode>
+				<providerIdentifier>${S_PROVIDER}</providerIdentifier>
+			</apduOriginator>
+			<informationSenderId>
+				<countryCode>0110000001</countryCode>
+				<providerIdentifier>${S_PROVIDER}</providerIdentifier>
+			</informationSenderId>
+			<informationRecipientId>
+				<countryCode>0110000001</countryCode>
+				<providerIdentifier>${T_CHARGER}</providerIdentifier>
+			</informationRecipientId>
+			<apduIdentifier>${C_APDU}</apduIdentifier>
+			<apduDate>20230316175200Z</apduDate>
+		</apci>
+		<adus>
+			<exceptionListAdus>
+				<ExceptionListAdu>
+					<aduIdentifier>12</aduIdentifier>
+					<exceptionListVersion>1</exceptionListVersion>
+					<exceptionListType>12</exceptionListType>
+					<exceptionValidityStart>20230203085452Z</exceptionValidityStart>
+					<exceptionListEntries>
+						<ExceptionListEntry>
+							<userId>
+								<pan>${PAN}</pan>
+								<licencePlateNumber>
+									<countryCode>0110000001</countryCode>
+									<alphabetIndicator>000000</alphabetIndicator>
+									<licencePlateNumber>${HEX_PLATE}</licencePlateNumber>
+								</licencePlateNumber>
+							</userId>
+							<statusType>0</statusType>
+							<reasonCode>0</reasonCode>
+							<entryValidityStart>20230104140028Z</entryValidityStart>
+							<actionRequested>3</actionRequested>
+							<efcContextMark>
+								<contractProvider>
+									<countryCode>0110000001</countryCode>
+									<providerIdentifier>${S_PROVIDER}</providerIdentifier>
+								</contractProvider>
+								<typeOfContract>001D</typeOfContract>
+								<contextVersion>9</contextVersion>
+							</efcContextMark>
+						</ExceptionListEntry>
+					</exceptionListEntries>
+				</ExceptionListAdu>
+			</exceptionListAdus>
+		</adus>
+	</infoExchangeContent>
+</infoExchange>
+
 EOF
 
     # modify white list filename
@@ -238,7 +277,12 @@ EOF
     #echo -e "...change filename from '$tmp_filename_WL' to '$filename_WL': OK \n"
 
     filename_WL_ZIP="$filename_WL.ZIP"
-    zip -r -q "$path_OUT_dir/$filename_WL_ZIP" "$path_OUT_dir/$filename_WL"
+    zip -q -j "$path_OUT_dir/$filename_WL_ZIP" "$path_OUT_dir/$filename_WL"
+    
+    echo $filename_WL_ZIP
+
+    # rename zipped file into .ZIP
+
     #echo "...zipped file white list: '$filename_WL_ZIP'"
     #echo
 
@@ -248,42 +292,42 @@ EOF
     ACK_TIPE=$(extract_ACK_type $LIST_TYPE)
     filename_ACK="$const_DA_A$naz_TC$fn_T_CHARGER$const_T$naz_SP$fn_S_PROVIDER.$const_SET.$ACK_TIPE.$fn_PRG_WL.XML"
 
-    cat << EOF > "$path_OUT_dir/$filename_ACK"
-    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-    <infoExchange>
-        <infoExchangeContent>
-            <apci>
-                <aidIdentifier>3</aidIdentifier>
-                <apduOriginator>
-                    <countryCode>0110000001</countryCode>
-                    <providerIdentifier>${T_CHARGER}</providerIdentifier>
-                </apduOriginator>
-                <informationSenderId>
-                    <countryCode>0110000001</countryCode>
-                    <providerIdentifier>${T_CHARGER}</providerIdentifier>
-                </informationSenderId>
-                <informationRecipientId>
-                    <countryCode>0110000001</countryCode>
-                    <providerIdentifier>${S_PROVIDER}</providerIdentifier>
-                </informationRecipientId>
-                <apduIdentifier>927</apduIdentifier>
-                <apduDate>20240222143716Z</apduDate>
-            </apci>
-            <adus>
-                <ackAdus>
-                    <AckAdu>
-                        <apduIdentifier>${C_APDU}</apduIdentifier>
-                        <apduAckCode>2</apduAckCode>
-                        <actionCode>0</actionCode>
-                    </AckAdu>
-                </ackAdus>
-            </adus>
-        </infoExchangeContent>
-    </infoExchange>
+cat << EOF > "$path_OUT_dir/$filename_ACK"
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<infoExchange>
+	<infoExchangeContent>
+		<apci>
+			<aidIdentifier>3</aidIdentifier>
+			<apduOriginator>
+				<countryCode>0110000001</countryCode>
+				<providerIdentifier>${T_CHARGER}</providerIdentifier>
+			</apduOriginator>
+			<informationSenderId>
+				<countryCode>0110000001</countryCode>
+				<providerIdentifier>${T_CHARGER}</providerIdentifier>
+			</informationSenderId>
+			<informationRecipientId>
+				<countryCode>0110000001</countryCode>
+				<providerIdentifier>${S_PROVIDER}</providerIdentifier>
+			</informationRecipientId>
+			<apduIdentifier>927</apduIdentifier>
+			<apduDate>20240222143716Z</apduDate>
+		</apci>
+		<adus>
+			<ackAdus>
+				<AckAdu>
+					<apduIdentifier>${C_APDU}</apduIdentifier>
+					<apduAckCode>2</apduAckCode>
+					<actionCode>0</actionCode>
+				</AckAdu>
+			</ackAdus>
+		</adus>
+	</infoExchangeContent>
+</infoExchange>    
 EOF
 
     filename_ACK_ZIP="$filename_ACK.ZIP"
-    zip -r -q "$path_OUT_dir/$filename_ACK_ZIP" "$path_OUT_dir/$filename_ACK"
+    zip -q -j "$path_OUT_dir/$filename_ACK_ZIP" "$path_OUT_dir/$filename_ACK"
     #echo "...zipped file ACK: '$filename_ACK_ZIP'"
     #echo
 
