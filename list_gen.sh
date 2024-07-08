@@ -3,7 +3,7 @@
 # usage menu
 echo
 echo "---------------------- Usage ----------------------"
-echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < delete file.XML at the end > (y-n)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f <plate chars> (ex. ABCD) \n     -d < discount ID > (ex. 22) \n    -p < progressive plate number > (ex. 25) \n    -r < prg wl filename > \n"
+echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < delete file.XML at the end > (y-n)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f < plate chars > (ex. ABCD) \n    -d < discount ID > (ex. 22) \n    -p < progressive plate number > (ex. 25) \n    -r < prg wl filename > \n"
 echo
 
 while getopts n:t:o:s:c:a:p:f:d:r: flag
