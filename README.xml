@@ -14,6 +14,6 @@ I parametri da dare in pasto allo script sono:
 	-r -> numero progressivo del filename
 	
 
-Ex. bash list_gen	-n 10 -t WI -o y -s 151 -t 6 -a 300 -f ABCD -d 22 -p 100 -r 2090
+Ex. bash list_gen.sh	-n 10 -t WI -o y -s 151 -t 6 -a 300 -f ABCD -d 22 -p 100 -r 2090
 
 Lanciato il comando, lo script crea, se non esiste, la cartella di destinazione OUT_DIR al cui interno verranno inseriti i file di WL e gli ack relativi. A questo punto basterà eseguire il drag and drop dei file generati all'interno della cartella 'new' presente sulla macchina dedicata. Se durante il run si incontreranno degli errori (di qualsiasi natura) lo script li mostrerà in console ed abortirà il processo di esecuzione.
