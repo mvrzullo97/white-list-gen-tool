@@ -3,7 +3,7 @@
 # usage menu
 echo
 echo "---------------------- Usage ----------------------"
-echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < delete *.XML at the end > (yY-nN)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f < plate number chars > (ex. ABCD) \n    -d < discount ID > (ex. 22) \n    -p < progressive plate number > (0 < x < 999 - #iterations) \n    -r < progressive WL filename > \n"
+echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < delete *.XML at the end > (yY-nN)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f < plate number chars > (ex. ABCD) \n    -d < opt. discount ID > (ex. 22) \n    -p < progressive plate number > (0 < x < 999 - #iterations) \n    -r < progressive WL filename > \n"
 echo
 
 while getopts n:t:o:s:c:a:p:f:d:r: flag
@@ -24,7 +24,7 @@ do
 done
 
 # params check
-if [ $# != 16 ] && [ $# != 18 ] && [ $# != 20 ]; then
+if [ $# != 18 ] && [ $# != 20 ]; then
     echo "Argument error: please digit right command."
 	echo
 	exit 0
