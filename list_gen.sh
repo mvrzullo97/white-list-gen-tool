@@ -288,7 +288,7 @@ cat << EOF >> "$path_OUT_dir/$tmp_filename_WL"
 </infoExchange>
 EOF
 
-    # pattern filename WL: DA06A56.F<naz_SP>00<cod_SP(5 chars)>T<naz_TC>00<cod_TC (5 chars)>.SET.<list_TYPE>.<unix_timestamp>.000<PRG (10 chars)>.XML
+    # pattern filename WL:DA06A56.F<naz_SP>00<cod_SP(5 chars)>T<naz_TC>00<cod_TC (5 chars)>.SET.<list_TYPE>.<unix_timestamp>.000<PRG (10 chars)>.XML
     
     const_DA_A="DA06A56.F"
     naz_TC="IT" # per ora costante
