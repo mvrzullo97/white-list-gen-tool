@@ -15,7 +15,7 @@
 				<countryCode>0110000001</countryCode>
 				<providerIdentifier>6</providerIdentifier>
 			</informationRecipientId>
-			<apduIdentifier>32082</apduIdentifier>
+			<apduIdentifier>32085</apduIdentifier>
 			<apduDate>20230316175200Z</apduDate>
 		</apci>
 		<adus>
@@ -28,11 +28,11 @@
 					<exceptionListEntries>
 						<ExceptionListEntry>
 							<userId>
-								<pan>2024070800000000102F</pan>
+								<pan>2024070900000000984F</pan>
 								<licencePlateNumber>
 									<countryCode>0110000001</countryCode>
 									<alphabetIndicator>000000</alphabetIndicator>
-									<licencePlateNumber>07414D313032414D</licencePlateNumber>
+									<licencePlateNumber>07414D393834414D</licencePlateNumber>
 								</licencePlateNumber>
 							</userId>
 							<statusType>0</statusType>

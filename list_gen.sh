@@ -3,7 +3,7 @@
 # usage menu
 echo
 echo "---------------------- Usage ----------------------"
-echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < delete file.XML at the end > (y-n)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f < plate chars > (ex. ABCD) \n    -d < discount ID > (ex. 22) \n    -p < progressive plate number > (ex. 25) \n    -r < prg wl filename > \n"
+echo -e "\n   bash $0\n\n    -n < number of wl to generate > \n    -t < list type > (WI or WL) \n    -o < delete *.XML at the end > (yY-nN)\n    -s < service provider code > (ex. 151) \n    -c < toll charger code > (ex. 6) \n    -a < apduIdentifier code > \n    -f < plate number chars > (ex. ABCD) \n    -d < discount ID > (ex. 22) \n    -p < progressive plate number > (0 < x < 999 - #iterations) \n    -r < progressive WL filename > \n"
 echo
 
 while getopts n:t:o:s:c:a:p:f:d:r: flag
@@ -16,7 +16,7 @@ do
         c) T_CHARGER=${OPTARG};;
         a) C_APDU=${OPTARG};;
         p) PRG=${OPTARG};;
-        f) PLATE=${OPTARG};;
+        f) PLATE_NUMBER=${OPTARG};;
         d) DISCOUNT=${OPTARG};;
         r) fn_PRG_WL=${OPTARG};;
 		\?) echo -e "\n Argument error! \n"; exit 0 ;;
@@ -34,8 +34,8 @@ fi
 current_timestamp=$(date +"%Y%m%d")
 OUT_DIR="OUT_DIR_WL"
 tmp_filename_WL="tmp_filename_white_list.xml"
-plate_f=${PLATE:0:2}
-plate_l=${PLATE:2:2}
+plate_f=${PLATE_NUMBER:0:2}
+plate_l=${PLATE_NUMBER:2:2}
 providers_code=('151' '2321' '3000' '7' '49')
 naz_providers=('IT' 'IT' 'IT' 'DE' 'FR')
 keys=( {A..Z} )
@@ -43,19 +43,33 @@ values=('11000' '10011' '01110' '10010' '10000' '10110' '01011' '00101' '01100' 
         '00110' '00011' '01101' '11101' '01010' '10100' '00001' '11100' '01111' '11001' '10111' '10101' '10001') 
 discounts=('22')
 BOOL_discount=false
+upper_bound=$(expr $PRG + $n)
 
-# check if provider exists
-if ! [[ ${providers_code[@]} =~ $S_PROVIDER ]] ; then
-        echo "Param error: service provider's code '$S_PROVIDER' doesn't exist."
-        echo
-        exit 0
+# input validation
+if [[ $LIST_TYPE != 'WI' ]] && [[ $LIST_TYPE != 'WF' ]] ; then
+    echo -e "Param error: please digit a valid type of white list (WI or WF) \n"
+    exit 0
+elif ! [[ "$BOOL_delete_xml" =~ ^([yY])$ ]] && ! [[ "$BOOL_delete_xml" =~ ^([nN])$ ]] ; then
+    echo -e "Param error: please digit valid value for -o param (yY-nN) \n"
+    exit 0
+elif ! [[ ${providers_code[@]} =~ $S_PROVIDER ]] ; then
+    echo -e "Param error: service provider's code '$S_PROVIDER' doesn't exist. \n"
+    exit 0
 elif ! [[ ${discounts[@]} =~ $DISCOUNT ]] ; then
-        echo "Param error: discount '$DISCOUNT' doesn't exist."
-        echo
-        exit 0
+    echo -e "Param error: discount '$DISCOUNT' doesn't exist. \n"
+    exit 0
+elif ! [ $upper_bound -lt 999 ] ; then 
+    echo -e "Param error: progressive plate number out of bounds (0 < PLATE_NUMBER < 999 - number of iterations) \n"
+    exit 0
+elif [ $T_CHARGER != '6' ] ; then 
+    echo -e "Param error: toll charger must be 6 \n"
+    exit 0
+elif [ ${#PLATE_NUMBER} != 4 ] ; then 
+    echo -e "Param error: length of PLATE_NUMBER must be 4 \n"
+    exit 0
 fi
 
-if ! [ $DISCOUNT == '' ] ; then
+if [ $DISCOUNT != '' ] ; then
     BOOL_discount=true
 fi
 
@@ -87,7 +101,7 @@ function generate_PAN
     echo ${str}
 }
 
-function generate_PLATE
+function generate_PLATE_NUMBER
 {
     PRG=$1
     plate_f=$2
@@ -193,14 +207,14 @@ list_PRG=( $(seq $MIN $MAX) )
 for ((i=0; i<n; i++)) 
 do
     PRG=${list_PRG[i]}
-    echo -e "...create white list n° $(expr $i + 1) \n"
+    echo -e "...creating white list n° $(expr $i + 1) \n"
 
     PAN=$(generate_PAN $PRG)
-    PLATE=$(generate_PLATE $PRG $plate_f $plate_l)
-    HEX_PLATE=$(convert_PLATE_to_HEX $PLATE)
+    PLATE_NUMBER=$(generate_PLATE_NUMBER $PRG $plate_f $plate_l)
+    HEX_PLATE=$(convert_PLATE_to_HEX $PLATE_NUMBER)
 
-    echo -e "...generate PAN: $PAN"
-    echo -e "...generate PLATE: $PLATE \n"
+    echo -e "...generated PAN: $PAN"
+    echo -e "...generated PLATE_NUMBER: $PLATE_NUMBER \n"
 
     # create tmp file for the WL
     touch "$path_OUT_dir/$tmp_filename_WL"
