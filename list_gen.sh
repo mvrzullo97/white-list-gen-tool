@@ -69,7 +69,7 @@ elif [ ${#PLATE_NUMBER} != 4 ] ; then
     exit 0
 fi
 
-if [ $DISCOUNT != '' ] ; then
+if ! [ -z "${DISCOUNT}" ] ; then
     BOOL_discount=true
 fi
 
@@ -271,7 +271,7 @@ cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
 								<contextVersion>9</contextVersion>
 							</efcContextMark>
 EOF
-if [ $BOOL_discount ] ; then
+if [ $BOOL_discount == "true" ] ; then
 cat << EOF >> "$path_OUT_dir/$tmp_filename_WL"
 <applicableDiscounts>
 <discountId>${DISCOUNT}</discountId>
