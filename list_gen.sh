@@ -45,8 +45,9 @@ discounts=('22')
 BOOL_discount=false
 upper_bound=$(expr $PRG + $n)
 
+
 # input validation
-if [[ $LIST_TYPE != 'WI' ]] && [[ $LIST_TYPE != 'WF' ]] ; then
+if [[ $LIST_TYPE != "WI" ]] && [[ $LIST_TYPE != "WF" ]] ; then
     echo -e "Param error: please digit a valid type of white list (WI or WF) \n"
     exit 0
 elif ! [[ "$BOOL_delete_xml" =~ ^([yY])$ ]] && ! [[ "$BOOL_delete_xml" =~ ^([nN])$ ]] ; then
@@ -69,9 +70,10 @@ elif [ ${#PLATE_NUMBER} != 4 ] ; then
     exit 0
 fi
 
-if [ $DISCOUNT != '' ] ; then
+if ! [ -z "${DISCOUNT}" ] ; then
     BOOL_discount=true
 fi
+
 
 # create OUT_DIR if not exist
 if ! [ -d $OUT_DIR ] ; then
@@ -198,7 +200,6 @@ NAZ_S_PROVIDER=$(get_naz_from_pvd $S_PROVIDER)
 BAUDOT_CODE=$(generate_BAUDOT $NAZ_S_PROVIDER)
 LIST_TYPE=$(extract_WL_type $LIST_TYPE)
 
-
 MIN=$(expr $PRG)
 MAX=$(expr $MIN + $n)
 list_PRG=( $(seq $MIN $MAX) )
@@ -271,7 +272,7 @@ cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
 								<contextVersion>9</contextVersion>
 							</efcContextMark>
 EOF
-if [ $BOOL_discount ] ; then
+if [ $BOOL_discount == "true" ] ; then
 cat << EOF >> "$path_OUT_dir/$tmp_filename_WL"
 <applicableDiscounts>
 <discountId>${DISCOUNT}</discountId>
