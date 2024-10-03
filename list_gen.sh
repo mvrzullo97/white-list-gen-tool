@@ -147,8 +147,10 @@ function extract_WL_type
     LIST_TYPE=$1
     if [ $LIST_TYPE == "WI" ] ; then
         LIST_TYPE="WIWI"
+        exception_list_type="12"
     else
         LIST_TYPE="WFWF"
+        exception_list_type="2"
     fi
     echo ${LIST_TYPE}
 }
@@ -247,7 +249,7 @@ cat << EOF > "$path_OUT_dir/$tmp_filename_WL"
 				<ExceptionListAdu>
 					<aduIdentifier>12</aduIdentifier>
 					<exceptionListVersion>1</exceptionListVersion>
-					<exceptionListType>12</exceptionListType>
+					<exceptionListType>${exception_list_type}</exceptionListType>
 					<exceptionValidityStart>20230203085452Z</exceptionValidityStart>
 					<exceptionListEntries>
 						<ExceptionListEntry>
