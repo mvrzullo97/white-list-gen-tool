@@ -74,7 +74,6 @@ if ! [ -z "${DISCOUNT}" ] ; then
     BOOL_discount=true
 fi
 
-
 # create OUT_DIR if not exist
 if ! [ -d $OUT_DIR ] ; then
 	mkdir $OUT_DIR
