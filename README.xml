@@ -4,7 +4,7 @@ I parametri da dare in pasto allo script sono:
 	
 	-n -> numero di White List da voler generare (ognuna delle quali conterrà una coppia Pan/Targa ed eventuale sconto)
 	-t -> specifica la tipologia di White List da generare (WI = Incremental, WF = Full)
-	-o -> è un param booleano e permette, una volta terminato il ciclo di generazione, di eliminare i file .XML dalla cartella di destinazione OUT_DIR (questo per 	facilitare il successivo drag and drop dei file sulla macchina dedicata)
+	-o -> è un param booleano e permette, una volta terminato il ciclo di generazione, di eliminare i file .XML dalla cartella di destinazione OUT_DIR (questo per 	facilitare 	il successivo drag and drop dei file sulla macchina dedicata)
 	-s -> codice del service provider, al momento quelli utilizzabili sono: 151, 2321, 3000, 7 e 49
 	-c -> codice della concessionaria, al momento utilizziamo solo 6 (ASPI)
 	-a -> codice apduIdentifier che verrà, ad ogni ciclo, incrementato affinché LAT-WL gestisca correttamente la lista
@@ -12,8 +12,8 @@ I parametri da dare in pasto allo script sono:
 	-d -> parametro opzionale se si vuole associare lo sconto alle coppie Pan/Targa, al momento solo ID 22
 	-p -> numero di targa, ad ogni ciclo viene incrementato di 1
 	-r -> numero progressivo del filename
-	
 
-Ex. bash list_gen	-n 10 -t WI -o y -s 151 -t 6 -a 300 -f ABCD -d 22 -p 100 -r 2090
+
+Ex. bash list_gen.sh	-n 10 -t WI -o y -s 151 -c 6 -a 300 -f ABCD -d 22 -p 100 -p 190
 
 Lanciato il comando, lo script crea, se non esiste, la cartella di destinazione OUT_DIR al cui interno verranno inseriti i file di WL e gli ack relativi. A questo punto basterà eseguire il drag and drop dei file generati all'interno della cartella 'new' presente sulla macchina dedicata. Se durante il run si incontreranno degli errori (di qualsiasi natura) lo script li mostrerà in console ed abortirà il processo di esecuzione.
